@@ -2,97 +2,125 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>Among Us 15人制限用 交換ルーレット</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Among Us交換ルーレット</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark light">
 <style>
   :root{
-    --bg:#0b0b0b; --panel:#141414; --line:#2a2a2a; --fg:#eee; --muted:#9aa0a6; --acc:#8ab4f8;
+    --bg:#0b0b0b; --panel:#141414; --line:#2a2a2a; --fg:#eee; --muted:#9aa0a6; --acc:#8ab4f8; --tap:48px;
   }
-  html,body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0}
-  .wrap{max-width:980px;margin:16px auto;padding:0 12px}
-  h1{font-size:20px;margin:0 0 8px}
-  .row{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}
-  .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-  @media(max-width:760px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media (prefers-color-scheme: light) {
+    :root{ --bg:#fafafa; --panel:#ffffff; --line:#ddd; --fg:#111; --muted:#667085; --acc:#2563eb; }
+  }
+
+  html,body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0}
+  .wrap{max-width:980px;margin:0 auto;padding:calc(env(safe-area-inset-top,0) + 12px) 12px calc(env(safe-area-inset-bottom,0) + 16px)}
+  h1{font-size:clamp(18px,2.4vw,22px);margin:0 0 8px}
+  .row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:12px 0}
+  .grid{display:grid;gap:8px}
+  /* グリッドは画面幅で段数が可変 */
+  .grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  @media (max-width:880px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  @media (max-width:640px){ .grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media (max-width:420px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
   .chip{
-    border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;user-select:none;
-    background:#0f0f0f; transition:transform .05s ease, box-shadow .15s ease;
-    display:flex;flex-direction:column;gap:6px; align-items:center; justify-content:center; min-height:70px;
+    border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;user-select:none;
+    background:color-mix(in oklab, var(--panel), #000 7%); 
+    display:flex;flex-direction:column;gap:8px; align-items:center; justify-content:center; min-height:82px;
+    touch-action:manipulation;
   }
-  .chip.sel{outline:2px solid var(--acc);box-shadow:0 0 0 2px rgba(138,180,248,.2) inset}
-  .chip .swatch{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
-  .chip .name{font-size:12px}
+  .chip:active{transform:scale(.98)}
+  .chip.sel{outline:2px solid var(--acc);box-shadow:0 0 0 2px color-mix(in oklab, var(--acc), transparent 80%) inset}
+  .chip .swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+  .chip .name{font-size:13px;line-height:1}
   .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  .controls .box{background:#0f0f0f;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-  input[type="number"]{background:#0f0f0f;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:80px}
-  button{background:#1b1b1b;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
-  button:disabled{opacity:.5;cursor:not-allowed}
+  .controls .box{background:color-mix(in oklab, var(--panel), #000 7%);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  input[type="number"]{font-size:16px;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;width:90px;min-height:var(--tap)}
+  button{
+    font-size:16px;background:color-mix(in oklab, var(--panel), #000 7%);color:var(--fg);
+    border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;min-height:var(--tap);
+    touch-action:manipulation;
+  }
+  button:active{transform:scale(.98)}
+  button:disabled{opacity:.55;cursor:not-allowed}
   .hint{font-size:12px;color:var(--muted)}
   .ticker{
-    font-size:28px; text-align:center; padding:18px; border:1px dashed var(--line); border-radius:10px; background:#0f0f0f;
-    min-height:60px; letter-spacing:.5px;
+    font-size:clamp(20px,4.5vw,28px); text-align:center; padding:18px; border:1px dashed var(--line); border-radius:12px; 
+    background:color-mix(in oklab, var(--panel), #000 7%);
+    min-height:64px; letter-spacing:.5px; line-height:1.3;
   }
   .result-badges{display:flex;flex-wrap:wrap;gap:8px}
-  .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#0f0f0f}
-  .badge .sw{width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
+  .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:color-mix(in oklab, var(--panel), #000 7%);min-height:var(--tap)}
+  .badge .sw{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.25)}
   .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .spacer{flex:1}
+  .btn-bar{display:flex;gap:8px;flex-wrap:wrap}
+  .small{font-size:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Among Us 15人制限用 交換ルーレット</h1>
+  <h1>Among Us交換ルーレット</h1>
 
   <!-- 色選択 -->
-  <div class="row">
-    <div class="flex">
-      <div class="hint">上の色を選択すると参加者として扱います もう一度クリックで除外</div>
+  <div class="row" id="row-select">
+    <div class="flex" style="margin-bottom:6px">
+      <div class="hint">参加させる色をタップして選択 もう一度タップで解除</div>
       <div class="spacer"></div>
-      <div class="hint">選択中: <span id="selCount">0</span> 人</div>
+      <div class="hint">選択中 <span id="selCount">0</span> 人</div>
+    </div>
+    <div class="btn-bar" style="margin-bottom:8px">
+      <button id="selectAllBtn">全選択</button>
+      <button id="clearAllBtn">全解除</button>
+      <button id="invertBtn">反転</button>
     </div>
     <div id="colorGrid" class="grid" aria-label="色の選択グリッド"></div>
   </div>
 
   <!-- 設定 -->
-  <div class="row">
+  <div class="row" id="row-config">
     <div class="controls">
-      <div class="box">交換人数: <input id="numPick" type="number" min="1" value="1"></div>
-      <button id="fitTo15Btn" title="選択が15人超のとき余剰人数を自動設定">15人に収める</button>
+      <div class="box">交換人数 <input id="numPick" type="number" inputmode="numeric" min="1" value="1" aria-label="交換人数"></div>
       <div class="spacer"></div>
-      <button id="spinBtn">ルーレット開始</button>
-      <button id="resetBtn">リセット</button>
+      <div class="btn-bar">
+        <button id="spinBtn">ルーレット開始</button>
+        <button id="resetBtn">結果をリセット</button>
+      </div>
     </div>
     <div class="hint" style="margin-top:6px">
-      ルーレットは重複なしで順に確定します 複数名選ぶ場合は自動で連続抽選します
+      ルーレットは重複なしで順に確定 複数名を選ぶ場合は自動で連続抽選
     </div>
   </div>
 
   <!-- ルーレット表示 -->
-  <div class="row">
-    <div id="ticker" class="ticker">ここにルーレット結果が流れます</div>
+  <div class="row" id="row-roulette">
+    <div id="ticker" class="ticker" role="status" aria-live="polite">ここにルーレット結果が流れます</div>
   </div>
 
   <!-- 結果 -->
-  <div class="row">
+  <div class="row" id="row-result">
     <div class="flex">
       <div>交換対象 確定順</div>
       <div class="spacer"></div>
-      <button id="copyBtn" title="結果をテキストとしてコピー">結果をコピー</button>
+      <div class="btn-bar">
+        <button id="copyBtn" title="結果をテキストとしてコピー">結果をコピー</button>
+        <button id="shareBtn" title="共有">共有</button>
+      </div>
     </div>
     <div id="result" class="result-badges" style="margin-top:10px"></div>
+    <div class="small hint" id="copyNote" style="margin-top:6px; display:none">コピーしました</div>
   </div>
 
   <div class="row">
     <div class="hint">
-      部屋の公平性を保つための抽選補助です 参加者の合意を取ったうえで利用してください ブラウザ内のみで動作し選択状態は端末に保存されます
+      ブラウザ内でのみ動作し選択状態は端末に保存 iOSやAndroidのホーム画面に追加しても使用可
     </div>
   </div>
 </div>
 
 <script>
-/* =========================
-   指定色リストをそのまま使用
-   ========================= */
+/* ===== 指定色リスト ===== */
 const COLORS = [
   { id:0,  name:"赤",     hex:"#c51111" },
   { id:1,  name:"青",     hex:"#132ed1" },
@@ -114,61 +142,85 @@ const COLORS = [
   { id:17, name:"コーラル", hex:"#ff6b6b" }
 ];
 
-// 状態
+/* ===== 状態 ===== */
 let selectedIds = loadSelections();
 let results = []; // {id,name,hex}
 let spinning = false;
 
-// DOM
+/* ===== DOM ===== */
 const grid = document.getElementById('colorGrid');
 const selCountEl = document.getElementById('selCount');
 const numPickEl = document.getElementById('numPick');
 const spinBtn = document.getElementById('spinBtn');
 const resetBtn = document.getElementById('resetBtn');
-const fitTo15Btn = document.getElementById('fitTo15Btn');
 const ticker = document.getElementById('ticker');
 const resultBox = document.getElementById('result');
 const copyBtn = document.getElementById('copyBtn');
+const shareBtn = document.getElementById('shareBtn');
+const copyNote = document.getElementById('copyNote');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const invertBtn = document.getElementById('invertBtn');
 
-// 初期描画
+/* ===== 初期描画 ===== */
 renderGrid();
 updateSelCount();
 renderResults();
 adjustNumPickMax();
 
-// イベント
-fitTo15Btn.addEventListener('click', ()=>{
-  const nSel = selectedIds.length;
-  if (nSel <= 15) {
-    numPickEl.value = 1;
-  } else {
-    numPickEl.value = Math.max(1, nSel - 15);
-  }
-});
-
-numPickEl.addEventListener('input', ()=>{
-  adjustNumPickMax();
-});
+/* ===== イベント ===== */
+numPickEl.addEventListener('input', adjustNumPickMax);
 
 resetBtn.addEventListener('click', ()=>{
   if (spinning) return;
   results = [];
   ticker.textContent = 'ここにルーレット結果が流れます';
   renderResults();
+  vibrate(10);
 });
 
 copyBtn.addEventListener('click', ()=>{
-  const lines = results.map((r,i)=>`${i+1}. ${r.name}`);
-  const text = lines.join('\n') || '結果なし';
-  navigator.clipboard.writeText(text).catch(()=>{});
+  const text = resultText();
+  copyToClipboard(text).then(()=>{
+    copyNote.style.display = 'block';
+    setTimeout(()=>copyNote.style.display='none', 1200);
+    vibrate(10);
+  });
+});
+
+shareBtn.addEventListener('click', async ()=>{
+  const text = resultText();
+  if (navigator.share) {
+    try { await navigator.share({ text }); }
+    catch(e) {}
+  } else {
+    await copyToClipboard(text);
+    copyNote.style.display = 'block';
+    setTimeout(()=>copyNote.style.display='none', 1200);
+  }
+  vibrate(10);
+});
+
+selectAllBtn.addEventListener('click', ()=>{
+  selectedIds = COLORS.map(c=>c.id);
+  saveSelections(); renderGrid(); updateSelCount(); adjustNumPickMax(); vibrate(10);
+});
+clearAllBtn.addEventListener('click', ()=>{
+  selectedIds = [];
+  saveSelections(); renderGrid(); updateSelCount(); adjustNumPickMax(); vibrate(10);
+});
+invertBtn.addEventListener('click', ()=>{
+  const set = new Set(selectedIds);
+  selectedIds = COLORS.map(c=>c.id).filter(id=>!set.has(id));
+  saveSelections(); renderGrid(); updateSelCount(); adjustNumPickMax(); vibrate(10);
 });
 
 spinBtn.addEventListener('click', async ()=>{
   if (spinning) return;
   const nPick = clamp(parseInt(numPickEl.value||'1',10), 1, 100);
   const pool = COLORS.filter(c=>selectedIds.includes(c.id) && !results.some(r=>r.id===c.id));
-  if (pool.length <= 0) { ticker.textContent = '選択中の候補がありません'; return; }
-  if (nPick > pool.length) { ticker.textContent = `候補が不足 残り ${pool.length} 人`; return; }
+  if (pool.length <= 0) { ticker.textContent = '選択中の候補がありません'; vibrate(30); return; }
+  if (nPick > pool.length) { ticker.textContent = `候補が不足 残り ${pool.length} 人`; vibrate(30); return; }
 
   spinning = true;
   spinBtn.disabled = true;
@@ -179,33 +231,40 @@ spinBtn.addEventListener('click', async ()=>{
       const winner = await spinOnce(rest);
       results.push(winner);
       renderResults();
-      await sleep(400);
+      await sleep(300);
     }
   } finally {
     spinning = false;
     spinBtn.disabled = false;
+    vibrate(20);
   }
 });
 
-// 描画
+/* ===== 関数群 ===== */
 function renderGrid(){
   grid.innerHTML = '';
   COLORS.forEach(c=>{
-    const div = document.createElement('div');
+    const div = document.createElement('button');
+    div.type = 'button';
     div.className = 'chip' + (selectedIds.includes(c.id)?' sel':'');
     div.setAttribute('data-id', String(c.id));
+    div.setAttribute('aria-pressed', selectedIds.includes(c.id) ? 'true' : 'false');
     div.innerHTML = `
       <div class="swatch" style="background:${c.hex}"></div>
       <div class="name">${c.name}</div>
     `;
+    // タップで選択切替
     div.addEventListener('click', ()=>{
       if (spinning) return;
       toggleSelect(c.id);
-      div.classList.toggle('sel', selectedIds.includes(c.id));
+      const on = selectedIds.includes(c.id);
+      div.classList.toggle('sel', on);
+      div.setAttribute('aria-pressed', on ? 'true' : 'false');
       updateSelCount();
       adjustNumPickMax();
       saveSelections();
-    });
+      vibrate(8);
+    }, {passive:true});
     grid.appendChild(div);
   });
 }
@@ -240,10 +299,15 @@ function renderResults(){
   adjustNumPickMax();
 }
 
+function resultText(){
+  const lines = results.map((r,i)=>`${i+1}. ${r.name}`);
+  return lines.join('\n') || '結果なし';
+}
+
 // ルーレット一回
 async function spinOnce(candidates){
-  const duration = 1600 + Math.random()*800;
-  const tick = 50;
+  const duration = 1400 + Math.random()*700;  // 軽量化
+  const tick = 55;
   const endTime = performance.now() + duration;
   let lastIdx = -1;
 
@@ -260,18 +324,19 @@ async function spinOnce(candidates){
   const winner = candidates[Math.floor(Math.random()*candidates.length)];
   ticker.innerHTML = `確定: <b style="font-size:120%">${winner.name}</b>`;
   flashTicker(winner.hex);
+  vibrate(30);
   return winner;
 }
 
 function flashTicker(color){
   ticker.style.transition = 'background 0.15s ease';
-  ticker.style.backgroundColor = hexWithAlpha(color, 0.25);
-  setTimeout(()=>{ ticker.style.backgroundColor = ''; }, 180);
+  ticker.style.backgroundColor = hexWithAlpha(color, 0.28);
+  setTimeout(()=>{ ticker.style.backgroundColor = ''; }, 200);
 }
 
 function hexWithAlpha(hex, alpha){
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return 'rgba(255,255,255,'+alpha+')';
+  if (!m) return `rgba(255,255,255,${alpha})`;
   const r=parseInt(m[1],16), g=parseInt(m[2],16), b=parseInt(m[3],16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
@@ -279,7 +344,32 @@ function hexWithAlpha(hex, alpha){
 function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
 function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
-// 保存
+/* クリップボード iOS 対応 */
+async function copyToClipboard(text){
+  try{
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  }catch(e){}
+  // フォールバック
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position='fixed';
+  ta.style.opacity='0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try{ document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* Haptics */
+function vibrate(ms){
+  try{ if (navigator.vibrate) navigator.vibrate(ms); }catch(e){}
+}
+
+/* 保存 */
 function saveSelections(){
   try{ localStorage.setItem('au_roulette_selected', JSON.stringify(selectedIds)); }catch(e){}
 }
