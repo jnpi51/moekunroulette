@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Among Us 議論なし部屋 補助</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+  :root{ --gap:12px; --radius:14px; --tap:48px;
+    --bg:#f6f7fb; --fg:#111; --muted:#666; --card:#fff; --line:#e5e7eb; --shadow:0 8px 28px rgba(0,0,0,.08); }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;}
+  main{min-height:100dvh;display:grid;place-items:center;padding:16px}
+  .card{position:relative;z-index:1;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);width:min(980px,96vw);padding:16px}
+  .hidden{display:none}
+  h1{font-size:20px;margin:0 0 8px}
+  h2{font-size:18px;margin:0 0 6px}
+  .lead{font-size:14px;color:var(--muted);margin:0 0 12px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  button{cursor:pointer;border:0;border-radius:12px;min-height:var(--tap);padding:12px 16px;font-size:16px;background:#111;color:#fff;touch-action:manipulation}
+  button.secondary{background:#e9edf2;color:#111}
+  button.ghost{background:transparent;border:1px solid var(--line);color:#111}
+  button.small{min-height:36px;padding:6px 10px;font-size:13px;border-radius:10px}
+  button:active{transform:translateY(1px)}
+  .grid{display:grid;gap:var(--gap);margin-top:10px}
+  @media(min-width:560px){.grid.cols-2{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:820px){.grid.cols-3{grid-template-columns:repeat(3,1fr)}}
+  .option{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;min-height:var(--tap)}
+  label{cursor:pointer;user-select:none;flex:1;display:flex;align-items:center;gap:12px}
+  .swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:0 0 auto}
+  input[type="checkbox"],input[type="radio"],select{accent-color:#111}
+  select,input[type="number"]{border:1px solid var(--line);border-radius:12px;min-height:var(--tap);padding:8px 12px;font-size:15px;background:#fff}
+  .muted{color:var(--muted);font-size:13px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;font-size:13px}
+  .chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px;background:#fff;margin:4px}
+  .cols-5{display:grid;gap:10px}
+  @media(min-width:760px){.cols-5{grid-template-columns:repeat(5,1fr)}}
+  .bucket{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;min-height:80px}
+  .bucket h3{font-size:15px;margin:0 0 6px}
+</style>
+</head>
+<body>
+<main>
+  <!-- 0. スタート -->
+  <section id="vStart" class="card">
+    <h1>議論なし部屋 補助</h1>
+    <p class="lead">スタート → 使用色選択 → クルー用スコア画面。上部で生存色を複数選択して一括操作</p>
+    <div class="actions">
+      <button id="btnStart" type="button" aria-controls="vColors">スタート</button>
+    </div>
+  </section>
+
+  <!-- 1. 使用色選択 -->
+  <section id="vColors" class="card hidden" aria-hidden="true">
+    <h2>使用キャラクターの色</h2>
+    <p class="lead">複数選択</p>
+    <div id="gridColors" class="grid cols-3" role="group" aria-label="色一覧"></div>
+    <div class="actions">
+      <button class="secondary" id="back1" type="button">戻る</button>
+      <button id="toCrew" type="button">決定</button>
+    </div>
+    <div id="msg1" class="muted"></div>
+  </section>
+
+  <!-- 2. クルー用スコア（生存選択＋一括操作） -->
+  <section id="vCrew" class="card hidden" aria-hidden="true">
+    <h2>クルー用スコア</h2>
+    <p class="lead">生存色を複数チェックし、下の一括ボタンで加点減点。個別操作も可</p>
+
+    <!-- 生存色マルチセレクト -->
+    <div class="option" style="flex-wrap:wrap">
+      <div class="row" style="width:100%;justify-content:space-between;align-items:center">
+        <strong>生存色</strong>
+        <div class="row">
+          <button id="aliveAll"  class="small ghost" type="button">全選択</button>
+          <button id="aliveNone" class="small ghost" type="button">解除</button>
+          <label class="small ghost" style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px">
+            生存のみ表示
+            <input id="filterAlive" type="checkbox" style="margin-left:6px">
+          </label>
+        </div>
+      </div>
+      <div id="aliveList" class="row" style="margin-top:6px"></div>
+    </div>
+
+    <!-- 重み設定 -->
+    <div class="grid cols-3">
+      <div class="option"><span>強白</span><input id="wStrongWhite" type="number" step="1" value="2"></div>
+      <div class="option"><span>白寄り</span><input id="wWhite" type="number" step="1" value="1"></div>
+      <div class="option"><span>不明</span><input id="wNeutral" type="number" step="1" value="0"></div>
+      <div class="option"><span>怪しい</span><input id="wSus" type="number" step="1" value="-1"></div>
+      <div class="option"><span>黒寄り</span><input id="wBlack" type="number" step="1" value="-2"></div>
+    </div>
+
+    <!-- 一括操作ボタン -->
+    <div class="option" style="flex-wrap:wrap">
+      <strong>一括操作</strong>
+      <div class="row" id="batchBtns" style="margin-top:6px">
+        <!-- 動的に作る -->
+      </div>
+    </div>
+
+    <!-- 個別操作 -->
+    <div id="scoreArea" class="grid cols-2"></div>
+
+    <div class="actions">
+      <button id="btnClassify" type="button">スコアチェック</button>
+      <button id="btnCopy" class="secondary" type="button">分類をコピー</button>
+      <button id="btnSave" class="secondary" type="button">JSON保存</button>
+      <label class="secondary" style="display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:#fff;color:#111;cursor:pointer">
+        JSON読込<input id="fileLoad" type="file" accept="application/json" style="display:none">
+      </label>
+      <button id="btnResetAll" class="ghost" type="button">初期化</button>
+    </div>
+
+    <!-- 結果 -->
+    <div class="grid" style="margin-top:10px">
+      <div class="cols-5">
+        <div class="bucket" id="bkSure"><h3>確白</h3><div class="wrap"></div></div>
+        <div class="bucket" id="bkWhite"><h3>白</h3><div class="wrap"></div></div>
+        <div class="bucket" id="bkGray"><h3>グレー</h3><div class="wrap"></div></div>
+        <div class="bucket" id="bkSus"><h3>怪しい人</h3><div class="wrap"></div></div>
+        <div class="bucket" id="bkBlack"><h3>黒</h3><div class="wrap"></div></div>
+      </div>
+      <p class="muted">基準（合計）: 強白以上 → 確白 / 白寄り以上 → 白 / 0 → グレー / 黒寄り以下 → 黒 / その他 → 怪しい人</p>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ========= 定義 ========= */
+const COLORS = [
+  { id:0,  name:"赤",     hex:"#c51111" },
+  { id:1,  name:"青",     hex:"#132ed1" },
+  { id:2,  name:"緑",     hex:"#117f2d" },
+  { id:3,  name:"ピンク", hex:"#ed54ba" },
+  { id:4,  name:"オレンジ", hex:"#f07d0d" },
+  { id:5,  name:"黄",     hex:"#f6f657" },
+  { id:6,  name:"黒",     hex:"#3f484e" },
+  { id:7,  name:"白",     hex:"#d6e0f0" },
+  { id:8,  name:"紫",     hex:"#6b2fbc" },
+  { id:9,  name:"茶",     hex:"#72491e" },
+  { id:10, name:"水色",   hex:"#38fedc" },
+  { id:11, name:"ライム", hex:"#50ef39" },
+  { id:12, name:"マルーン", hex:"#6b0000" },
+  { id:13, name:"ローズ", hex:"#ff79a8" },
+  { id:14, name:"バナナ", hex:"#ffe89d" },
+  { id:15, name:"グレー", hex:"#8391a0" },
+  { id:16, name:"タン",   hex:"#b18e5f" },
+  { id:17, name:"コーラル", hex:"#ff6b6b" },
+];
+
+/* ========= 要素 ========= */
+const vStart = $('#vStart'), vColors = $('#vColors'), vCrew = $('#vCrew');
+const btnStart = $('#btnStart'), back1 = $('#back1'), toCrew = $('#toCrew');
+const gridColors = $('#gridColors'), msg1 = $('#msg1');
+
+const aliveList = $('#aliveList'), aliveAll = $('#aliveAll'), aliveNone = $('#aliveNone'), filterAlive = $('#filterAlive');
+const wStrongWhite = $('#wStrongWhite'), wWhite = $('#wWhite'), wNeutral = $('#wNeutral'), wSus = $('#wSus'), wBlack = $('#wBlack');
+const batchBtns = $('#batchBtns');
+const scoreArea = $('#scoreArea');
+
+const bkSure = $('#bkSure .wrap'), bkWhite = $('#bkWhite .wrap'), bkGray = $('#bkGray .wrap'),
+      bkSus  = $('#bkSus .wrap'),  bkBlack = $('#bkBlack .wrap');
+
+const btnClassify = $('#btnClassify'), btnCopy = $('#btnCopy'), btnSave = $('#btnSave'),
+      fileLoad = $('#fileLoad'), btnResetAll = $('#btnResetAll');
+
+/* ========= 状態 ========= */
+let picked = [];                 // 使用色 id[]
+let alive  = new Set();          // 生存色 id set
+let scores = {};                 // { [colorId]: number } 合計のみ（ラウンド無し版）
+const LS_KEY = 'au_nd_room_v1';
+
+/* ========= 共通 ========= */
+function $(sel){ return document.querySelector(sel); }
+function el(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function colorInfo(id){ return COLORS.find(c=>c.id===id); }
+function swatch(hex){ const s=el('span','swatch'); s.style.background=hex; return s; }
+function show(view){
+  for(const v of [vStart,vColors,vCrew]) v.classList.add('hidden'), v.setAttribute('aria-hidden','true');
+  view.classList.remove('hidden'); view.setAttribute('aria-hidden','false');
+  window.scrollTo({top:0,behavior:'instant'});
+}
+function getWeights(){
+  return {
+    strongWhite: Number(wStrongWhite.value||2),
+    white: Number(wWhite.value||1),
+    neutral: Number(wNeutral.value||0),
+    sus: Number(wSus.value||-1),
+    black: Number(wBlack.value||-2),
+  };
+}
+function saveLS(){
+  const data = { picked, alive: [...alive], scores, weights: getWeights() };
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+function loadLS(){
+  try{
+    const raw = localStorage.getItem(LS_KEY); if(!raw) return false;
+    const obj = JSON.parse(raw);
+    if(!Array.isArray(obj.picked)) return false;
+    picked = obj.picked; alive = new Set(obj.alive||[]); scores = obj.scores||{};
+    if(obj.weights){
+      wStrongWhite.value = obj.weights.strongWhite ?? 2;
+      wWhite.value = obj.weights.white ?? 1;
+      wNeutral.value = obj.weights.neutral ?? 0;
+      wSus.value = obj.weights.sus ?? -1;
+      wBlack.value = obj.weights.black ?? -2;
+    }
+    return true;
+  }catch{ return false; }
+}
+
+/* ========= 1. 使用色 ========= */
+function renderColors(){
+  gridColors.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  COLORS.forEach(c=>{
+    const item = el('div','option');
+    const input = el('input'); input.type='checkbox'; input.id=`c-${c.id}`; input.value=String(c.id); input.className='pick';
+    const label = el('label'); label.htmlFor=input.id; label.append(swatch(c.hex), document.createTextNode(c.name));
+    item.append(input,label); frag.appendChild(item);
+  });
+  gridColors.appendChild(frag);
+  // 復元
+  picked.forEach(id=>{ const x=document.getElementById(`c-${id}`); if(x) x.checked=true; });
+}
+function getPicked(){ return Array.from(document.querySelectorAll('.pick:checked')).map(x=>Number(x.value)); }
+
+/* ========= 生存色マルチセレクト ========= */
+function renderAliveList(){
+  aliveList.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  picked.forEach(id=>{
+    const c = colorInfo(id);
+    const lab = el('label'); lab.className = 'chip';
+    const cb = el('input'); cb.type='checkbox'; cb.value=String(id); cb.checked = alive.has(id);
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) alive.add(id); else alive.delete(id);
+      saveLS();
+      renderScoreArea(); // 生存のみ表示なら更新
+    });
+    const sw = swatch(c.hex); sw.style.width='14px'; sw.style.height='14px';
+    lab.append(cb, sw, document.createTextNode(' '+c.name));
+    frag.appendChild(lab);
+  });
+  aliveList.appendChild(frag);
+}
+
+/* ========= 一括操作 ========= */
+const BATCH_DEFS = [
+  { key:'視認あり',   type:'white'  },
+  { key:'一緒行動',   type:'white'  },
+  { key:'アド一致',   type:'white'  },
+  { key:'不明',       type:'neutral'},
+  { key:'経路矛盾',   type:'sus'    },
+  { key:'ベント目撃', type:'black'  },
+  { key:'+2', type:'strongWhite' },
+  { key:'+1', type:'white' },
+  { key:'-1', type:'sus' },
+  { key:'-2', type:'black' },
+];
+function renderBatchButtons(){
+  batchBtns.innerHTML = '';
+  const W = getWeights();
+  const mk = (label, type)=>{
+    const b = el('button','small'); b.textContent = label;
+    b.addEventListener('click', ()=>{
+      const delta = W[type];
+      const targets = [...alive];
+      if(targets.length===0){ alert('生存色を選んでください'); return; }
+      targets.forEach(id=> addScore(id, delta));
+    });
+    return b;
+  };
+  BATCH_DEFS.forEach(d=> batchBtns.appendChild(mk(d.key, d.type)));
+}
+
+/* ========= 個別スコア ========= */
+function ensureScore(id){ if(typeof scores[id]!=='number') scores[id]=0; }
+function addScore(id, delta){
+  ensureScore(id);
+  scores[id] += delta;
+  saveLS();
+  const sumEl = document.getElementById(`sum-${id}`);
+  if(sumEl) sumEl.textContent = `合計: ${scores[id]}`;
+  renderBuckets(); // リアルタイムで枠更新
+}
+function renderScoreArea(){
+  scoreArea.innerHTML = '';
+  const W = getWeights();
+  let ids = picked.slice();
+  if(filterAlive.checked) ids = ids.filter(id=> alive.has(id));
+
+  ids.forEach(id=>{
+    ensureScore(id);
+    const c = colorInfo(id);
+    const box = el('div','option'); box.style.flexDirection='column';
+
+    const head = el('div','row'); head.style.justifyContent='space-between'; head.style.width='100%';
+    const who = el('div','row'); who.append(swatch(c.hex), el('strong')); who.lastChild.textContent = c.name;
+    const sum = el('span'); sum.id = `sum-${id}`; sum.textContent = `合計: ${scores[id]}`;
+    head.append(who,sum);
+
+    const btns = el('div','row');
+    const mk = (label, d)=>{
+      const b = el('button','small secondary'); b.textContent = label;
+      b.addEventListener('click', ()=> addScore(id, d));
+      return b;
+    };
+    btns.append(
+      mk('視認あり', W.white),
+      mk('一緒行動', W.white),
+      mk('アド一致', W.white),
+      mk('不明', W.neutral),
+      mk('経路矛盾', W.sus),
+      mk('ベント目撃', W.black),
+      mk('+2', W.strongWhite), mk('+1', W.white), mk('-1', W.sus), mk('-2', W.black)
+    );
+
+    box.append(head, btns);
+    scoreArea.appendChild(box);
+  });
+}
+
+/* ========= 分類表示 ========= */
+function clearBuckets(){ for(const w of [bkSure,bkWhite,bkGray,bkSus,bkBlack]) w.innerHTML=''; }
+function putChip(where, id){
+  const c = colorInfo(id);
+  const chip = el('span','chip');
+  const s = swatch(c.hex); s.style.width='14px'; s.style.height='14px';
+  chip.append(s, document.createTextNode(' '+c.name+'（'+scores[id]+'）'));
+  where.appendChild(chip);
+}
+function renderBuckets(){
+  clearBuckets();
+  const W = getWeights();
+  const others = picked.slice();
+  others.forEach(id=>{
+    const v = scores[id]||0;
+    if(v >= W.strongWhite) putChip(bkSure, id);
+    else if(v >= W.white)  putChip(bkWhite, id);
+    else if(v === 0)       putChip(bkGray, id);
+    else if(v <= W.black)  putChip(bkBlack, id);
+    else                   putChip(bkSus, id);
+  });
+}
+
+/* ========= 共有・保存 ========= */
+function copySummary(){
+  const names = ids => ids.map(i=>colorInfo(i)?.name).filter(Boolean).join('、') || '-';
+  const list = picked.slice().sort((a,b)=>(scores[b]||0)-(scores[a]||0));
+  const W = getWeights();
+  const sure = list.filter(i=>(scores[i]||0) >= W.strongWhite);
+  const white= list.filter(i=>(scores[i]||0) < W.strongWhite && (scores[i]||0) >= W.white);
+  const gray = list.filter(i=>(scores[i]||0) === 0);
+  const black= list.filter(i=>(scores[i]||0) <= W.black);
+  const sus  = list.filter(i=> !sure.includes(i) && !white.includes(i) && !gray.includes(i) && !black.includes(i));
+  const txt =
+`使用色: ${names(picked)}
+生存: ${names([...alive])}
+確白: ${names(sure)}
+白: ${names(white)}
+グレー: ${names(gray)}
+怪しい人: ${names(sus)}
+黒: ${names(black)}
+合計:
+${list.map(i=>`- ${colorInfo(i)?.name}: ${scores[i]||0}`).join('\n')}`;
+  navigator.clipboard.writeText(txt).catch(()=>{});
+}
+function exportJSON(){
+  const data = { picked, alive:[...alive], scores, weights:getWeights() };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = el('a'); a.href = URL.createObjectURL(blob); a.download = 'au_nd_room.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function importJSON(file){
+  try{
+    const txt = await file.text();
+    const obj = JSON.parse(txt);
+    if(!Array.isArray(obj.picked)) { alert('形式が違う'); return; }
+    picked = obj.picked; alive = new Set(obj.alive||[]); scores = obj.scores||{};
+    if(obj.weights){
+      wStrongWhite.value = obj.weights.strongWhite ?? 2;
+      wWhite.value = obj.weights.white ?? 1;
+      wNeutral.value = obj.weights.neutral ?? 0;
+      wSus.value = obj.weights.sus ?? -1;
+      wBlack.value = obj.weights.black ?? -2;
+    }
+    saveLS();
+    // 再描画
+    renderAliveList();
+    renderBatchButtons();
+    renderScoreArea();
+    renderBuckets();
+    show(vCrew);
+  }catch{ alert('読込に失敗'); }
+}
+
+/* ========= イベント ========= */
+btnStart.addEventListener('click', ()=>{ renderColors(); msg1.textContent=''; show(vColors); });
+back1.addEventListener('click', ()=> show(vStart));
+toCrew.addEventListener('click', ()=>{
+  picked = getPicked();
+  if(picked.length===0){ msg1.textContent='少なくとも一つ選択'; return; }
+  // 初期化
+  scores = {}; picked.forEach(id=> scores[id]=0);
+  alive = new Set(picked); // 初期は全員生存
+  saveLS();
+
+  renderAliveList();
+  renderBatchButtons();
+  renderScoreArea();
+  renderBuckets();
+  show(vCrew);
+});
+
+aliveAll.addEventListener('click', ()=>{ picked.forEach(id=>alive.add(id)); renderAliveList(); saveLS(); });
+aliveNone.addEventListener('click', ()=>{ alive.clear(); renderAliveList(); saveLS(); });
+filterAlive.addEventListener('change', ()=> renderScoreArea());
+
+[wStrongWhite,wWhite,wNeutral,wSus,wBlack].forEach(inp=>{
+  inp.addEventListener('change', ()=>{ saveLS(); renderBatchButtons(); renderScoreArea(); renderBuckets(); });
+});
+
+btnClassify.addEventListener('click', renderBuckets);
+btnCopy.addEventListener('click', copySummary);
+btnSave.addEventListener('click', exportJSON);
+fileLoad.addEventListener('change', e=>{ const f=e.target.files?.[0]; if(f) importJSON(f); });
+btnResetAll.addEventListener('click', ()=>{ if(confirm('初期化しますか')){ localStorage.removeItem(LS_KEY); location.reload(); }});
+
+/* ========= 復元 ========= */
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(loadLS()){
+    renderColors();
+    renderAliveList();
+    renderBatchButtons();
+    renderScoreArea();
+    renderBuckets();
+    show(vCrew);
+  }else{
+    show(vStart);
+  }
+});
+</script>
+</body>
+</html>
